@@ -1,0 +1,20 @@
+# First, we're gonna import the modules we need
+from Bio import SeqIO # To read and write sequence files
+from Bio.Seq import Seq # To work with biological sequences
+import re # This is a built-in Python module called regular expressions. To search and pattern match.
+
+# The path to the GBFF and our gene of interest (the "gend ID" is available on the download page of NCBI)
+gbff_file = 'genomic.gbff' # Local path to the file
+gene_id = '7011359'
+
+# To read the GBFF file and find the gene
+found = False
+for record in SeqIO.parse(gbff_file, "genbank"):
+    for feature in record.features:
+        if feature.type == "gene":
+            if "db_xref" in feature.qualifiers:
+                for db_xref in feature.qualifiers["db_xref"]:
+                    if f"GeneID:{gene_id}" in db_xref:
+                        found = True
+                        print(f"**Gene ID: {gene_id}**")
+                        print(f"**Gene Name: {feature.qualifiers.get('gene', ['Unknown'])[0]}**")
