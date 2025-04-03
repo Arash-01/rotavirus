@@ -18,4 +18,12 @@ P.S:
 
 NCBI GenBank files (with the .gbff extension) typically represent sequences in DNA format, regardless of the type of virus or organism. This includes RNA viruses like Rotavirus. When analyzing RNA viruses, we convert the DNA sequence into RNA format by replacing thymine (T) with uracil (U) in the sequence. This is important because the RNA sequence is the functional genome for RNA viruses.
 
+GBFF (from NCBI) link:
+
+https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml?taxon=28875
+
+PDB (from Protein Data Bank) link:
+
+https://www.rcsb.org/structure/3FMG
+
 #bioinformatics #python #biopython
