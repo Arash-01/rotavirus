@@ -1,20 +1,146 @@
 # First, we're gonna import the modules we need
-from Bio import SeqIO # To read and write sequence files
-from Bio.Seq import Seq # To work with biological sequences
-import re # This is a built-in Python module called regular expressions. To search and pattern match.
+from Bio import SeqIO  # To read and write sequence files
+from Bio.Seq import Seq  # To work with biological sequences
+import re  # This is a built-in Python module called regular expressions. To search and pattern match.
 
 # The path to the GBFF and our gene of interest (the "gend ID" is available on the download page of NCBI)
-gbff_file = 'genomic.gbff' # Local path to the file
-gene_id = '7011359'
+gbff_file = "Path/genomic.gbff"  # Path to GenBank file
+gene_id = '7011359'  # Gene ID to search for in the GenBank file
 
 # To read the GBFF file and find the gene
-found = False
-for record in SeqIO.parse(gbff_file, "genbank"):
-    for feature in record.features:
-        if feature.type == "gene":
-            if "db_xref" in feature.qualifiers:
-                for db_xref in feature.qualifiers["db_xref"]:
-                    if f"GeneID:{gene_id}" in db_xref:
-                        found = True
-                        print(f"**Gene ID: {gene_id}**")
-                        print(f"**Gene Name: {feature.qualifiers.get('gene', ['Unknown'])[0]}**")
+found = False  # Flag to check if gene is found
+for record in SeqIO.parse(gbff_file, "genbank"):  # Parse the GenBank file
+    for feature in record.features:  # Loop through features of the record
+        if feature.type == "gene":  # Check if the feature is a gene
+            if "db_xref" in feature.qualifiers:  # Check if gene has a db_xref qualifier (used to store gene IDs)
+                for db_xref in feature.qualifiers["db_xref"]:  # Iterate through db_xref qualifiers
+                    if f"GeneID:{gene_id}" in db_xref:  # Check if the gene ID matches the one we're looking for
+                        found = True  # Set found flag to True if gene is found
+                        print(f"Gene ID: {gene_id}")
+                        print(f"Gene Name: {feature.qualifiers.get('gene', ['Unknown'])[0]}")  # Print gene name (if available)
+
+                        # Get the entire chromosome sequence (DNA)
+                        chrom_sequence = record.seq  # Extract the chromosome sequence
+
+                        # Convert the DNA sequence to RNA (replace Thymine (T) with Uracil (U))
+                        rna_sequence = chrom_sequence.replace("T", "U")  # Replace T with U for RNA
+                        print(f"RNA Sequence:\n{rna_sequence}")
+                        
+                        # Print the total number of nucleotides in the RNA genome
+                        genome_length = len(rna_sequence)
+                        print(f"Total number of nucleotides in genome (RNA): {genome_length}\n")
+
+                        # Find the start codon AUG
+                        start_codon = "AUG"  # Start codon in RNA sequence (AUG instead of ATG)
+                        stop_codons = ["UAA", "UAG", "UGA"]  # List of RNA stop codons
+                        
+                        start = rna_sequence.find(start_codon)  # Find position of start codon
+                        if start != -1:  # If start codon is found
+                            start_genbank = start + 1  # Convert to GenBank numbering (1-based index)
+                            print(f"Start codon found at position (GenBank numbering): {start_genbank}")
+                            
+                            # Search for stop codon
+                            end = None  # Initialize end variable
+                            for i in range(start, len(rna_sequence)-2, 3):  # Search for a stop codon in the sequence
+                                codon = rna_sequence[i:i+3]  # Extract a codon (3 nucleotides)
+                                if codon in stop_codons:  # Check if codon is a stop codon
+                                    end = i + 3  # Mark end position of the CDS
+                                    break
+                            
+                            if end:  # If stop codon is found
+                                cds_sequence = rna_sequence[start:end]  # Extract the CDS (coding sequence)
+                                print(f"CDS Sequence (RNA):\n{cds_sequence}")
+                                
+                                # Print the number of nucleotides in the CDS (ORF)
+                                cds_length = len(cds_sequence)
+                                print(f"Total number of nucleotides in CDS (ORF, RNA): {cds_length}\n")
+
+                                # Translate the CDS sequence to a protein
+                                protein_sequence = Seq(cds_sequence).translate(to_stop=True)  # Translate RNA to protein sequence
+                                print(f"Protein Sequence:\n{protein_sequence}\n")
+                            else:
+                                print("No stop codon found.")  # If no stop codon is found
+                        else:
+                            print("Start codon not found.")  # If no start codon is found
+                        
+                        break  # Break the loop once the gene is found
+    if found:  # If the gene was found, break the outer loop as well
+        break
+
+if not found:  # If gene is not found, print a message
+    print(f"GeneID {gene_id} not found in the file.")
+
+# Import additional libraries for protein structure analysis
+import requests  # To download PDB files
+from Bio import PDB  # To parse and analyze protein structures
+
+# Define the PDB code
+pdb_code = "3BDS"  # PDB code for the VP7 protein
+url = f"https://files.rcsb.org/view/3FMG.pdb"  # URL to download the PDB file
+
+# Download the PDB file
+response = requests.get(url)  # Send GET request to download the PDB file
+pdb_data = response.text  # Get the text content of the response
+
+# Save the PDB file on the system (optional)
+with open(f"{pdb_code}.pdb", "w") as file:
+    file.write(pdb_data)  # Save the PDB file to disk
+
+# Load the PDB file from the downloaded data
+pdb_parser = PDB.PDBParser(QUIET=True)  # Create a PDB parser
+structure = pdb_parser.get_structure(pdb_code, f"{pdb_code}.pdb")  # Parse the structure
+
+# Display structural information
+print("Protein Structure Information:")
+for model in structure:  # Iterate through each model in the structure
+    for chain in model:  # Iterate through each chain in the model
+        print(f"\nChain {chain.get_id()}:")  # Print chain ID
+
+        # Extract amino acid sequence
+        sequence = []
+        for residue in chain:  # Iterate through residues in the chain
+            if residue.id[0] == " ":  # Only consider amino acids (ignore heteroatoms, water, etc.)
+                sequence.append(residue.get_resname())  # Append the residue name (amino acid) to the sequence
+
+        print("Amino acid sequence:")
+        print(" ".join(sequence))  # Print the amino acid sequence
+
+        # Count the number of amino acids in the chain
+        num_amino_acids = len(sequence)
+        print(f"Number of amino acids in Chain {chain.get_id()}: {num_amino_acids}")
+
+        from collections import Counter  # To count occurrences of each amino acid
+        from Bio.SeqUtils import seq1  # To convert 3-letter amino acid codes to 1-letter
+
+        # Count amino acid frequencies
+        amino_acid_counts = Counter(sequence)
+        amino_acid_counts = {seq1(key): value for key, value in amino_acid_counts.items()}  # Convert to 1-letter codes
+
+        print("Amino Acid Counts:")
+        for aa, count in sorted(amino_acid_counts.items()):  # Print sorted counts
+            print(f"{aa}: {count}")
+
+        # Extract ligands (e.g., calcium ions or other molecules)
+        ligands = []
+        for residue in chain:  # Iterate through residues to find ligands
+            if residue.id[0] != " ":  # Ligands are not amino acids (they have different IDs)
+                ligands.append(residue.get_resname())  # Append ligand name to list
+
+        print("Ligands/Non-amino acid residues (e.g., calcium, water, etc.):")
+        if ligands:
+            print(" ".join(ligands))  # Print the list of ligands
+        else:
+            print("No ligands found.")  # If no ligands are found
+
+# Search for calcium ligands and extract their coordinates
+for model in structure:
+    for chain in model:
+        for residue in chain:
+            # Check if it's a calcium ligand (its name should be CA)
+            if residue.get_resname() == "CA":  # Calcium ligand
+                # Extract the coordinates of the calcium atoms
+                for atom in residue:
+                    if atom.get_name() == "CA":  # Look for calcium atom
+                        coords = atom.get_coord()  # Get the X, Y, Z coordinates of the calcium atom
+                        print(f"\nCalcium ligand found in Chain {chain.get_id()}, Residue {residue.get_resname()} at position {residue.get_id()}:")
+                        print(f"Coordinates: {coords[0]:.3f}, {coords[1]:.3f}, {coords[2]:.3f}")  # Print coordinates
