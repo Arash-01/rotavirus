@@ -20,7 +20,7 @@ NCBI GenBank files (with the .gbff extension) typically represent sequences in D
 
 GBFF (from NCBI) link:
 
-https://misuse.ncbi.nlm.nih.gov/error/abuse.shtml?taxon=28875
+https://www.ncbi.nlm.nih.gov/datasets/genome/?taxon=28875
 
 PDB (from Protein Data Bank) link:
 
